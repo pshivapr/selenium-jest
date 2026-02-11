@@ -1,0 +1,74 @@
+name: Selenium Jest Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        browser: [chrome]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Install Chrome browser
+      if: matrix.browser == 'chrome'
+      uses: browser-actions/setup-chrome@latest
+      with:
+        chrome-version: stable
+    
+    - name: Build TypeScript
+      run: npm run build
+    
+    - name: Run tests in parallel
+      env:
+        BROWSER: ${{ matrix.browser }}
+        HEADLESS: true
+      run: npm test  # Runs with Jest parallelization (50% of CPU cores)
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.node-version }}-${{ matrix.browser }}
+        path: |
+          test-results/
+          coverage/
+        retention-days: 30
+
+  docker-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      run: docker build -t selenium-jest-tests .
+    
+    - name: Run tests in Docker
+      run: docker run --rm selenium-jest-tests
+    
+    - name: Run tests with docker-compose
+      run: docker-compose up --abort-on-container-exit

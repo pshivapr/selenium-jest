@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.log
+
+# Test results and reports
+test-results/
+coverage/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
